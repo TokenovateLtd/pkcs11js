@@ -98,6 +98,8 @@ napi_value Init(napi_env env, napi_value exports)
       DEFINE_PKCS11_METHOD(C_SignEncryptUpdateCallback),
       DEFINE_PKCS11_METHOD(C_DecryptVerifyUpdate),
       DEFINE_PKCS11_METHOD(C_DecryptVerifyUpdateCallback),
+      DEFINE_PKCS11_METHOD(C_DeriveBIP32Master),
+      DEFINE_PKCS11_METHOD(C_DeriveBIP32Child),
   };
   napi_value constructor;
   napi_define_class(env, "PKCS11", NAPI_AUTO_LENGTH, Pkcs11::Constructor, nullptr, sizeof(instance_properties) / sizeof(*instance_properties), instance_properties, &constructor);

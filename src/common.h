@@ -74,6 +74,36 @@ typedef CK_AES_GCM_240_PARAMS CK_PTR CK_AES_GCM_240_PARAMS_PTR;
 #define CK_PARAM_GOSTR3410_DERIVE 27
 #define CK_PARAM_GOSTR3410_KEY_WRAP 28
 
+// Types of mechanisms
+#define CKM_BIP32_MASTER_DERIVE (CKM_VENDOR_DEFINED + 0xE00)
+#define CKM_BIP32_CHILD_DERIVE (CKM_VENDOR_DEFINED + 0xE01)
+
+
+typedef struct CK_BIP32_MASTER_DERIVE_PARAMS {
+ CK_ATTRIBUTE_PTR pPublicKeyTemplate;
+ CK_ULONG         ulPublicKeyAttributeCount;
+ CK_ATTRIBUTE_PTR pPrivateKeyTemplate;
+ CK_ULONG         ulPrivateKeyAttributeCount;
+ CK_OBJECT_HANDLE hPublicKey; // output parameter
+ CK_OBJECT_HANDLE hPrivateKey; // output parameter
+} CK_BIP32_MASTER_DERIVE_PARAMS;
+
+// typedef struct CK_BIP32_MASTER_DERIVE_PARAMS CK_PTR CK_BIP32_MASTER_DERIVE_PARAMS_PTR;
+
+typedef struct CK_BIP32_CHILD_DERIVE_PARAMS {
+  CK_ATTRIBUTE_PTR pPublicKeyTemplate;
+  CK_ULONG         ulPublicKeyAttributeCount;
+  CK_ATTRIBUTE_PTR pPrivateKeyTemplate;
+  CK_ULONG         ulPrivateKeyAttributeCount;
+  CK_ULONG_PTR     pulPath;
+  CK_ULONG         ulPathLen;
+  CK_OBJECT_HANDLE hPublicKey; // output parameter
+  CK_OBJECT_HANDLE hPrivateKey; // output parameter
+  CK_ULONG         ulPathErrorIndex; // output parameter
+} CK_BIP32_CHILD_DERIVE_PARAMS;
+
+// typedef struct CK_BIP32_CHILD_DERIVE_PARAMS CK_PTR CK_BIP32_CHILD_DERIVE_PARAMS_PTR;
+
 /**
  * @brief Retrieves the name of the error code.
  *

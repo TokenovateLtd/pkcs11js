@@ -829,6 +829,62 @@ bool get_args(napi_env env, napi_callback_info info, size_t argc, napi_value *ar
   }
 
 /**
+ * @brief Get a list of unsigned long integers from the argument list at a specified index.
+ *
+ * @param env The N-API environment.
+ * @param arg The array of N-API values representing the arguments.
+ * @param argc The number of arguments in the array.
+ * @param index The index of the argument to retrieve.
+ * @param values The std::vector<CK_ULONG> to store the retrieved values.
+ * @return true if the unsigned long integers were successfully retrieved, false otherwise.
+ */
+bool get_args_ulong_vector(napi_env env, napi_value *arg, size_t argc, size_t index, std::vector<CK_ULONG>& values)
+{
+    ASSERT_ARGS_INDEX(index);
+
+    // Check if the argument is a TypedArray
+    bool is_typedarray = false;
+    napi_status status = napi_is_typedarray(env, arg[index], &is_typedarray);
+    if (status != napi_ok || !is_typedarray) {
+        THROW_TYPE_ERRORF(false, "Argument %lu has wrong type. Should be a TypedArray", index);
+    }
+
+    // Get TypedArray information
+    napi_typedarray_type type;
+    size_t length;
+    void *data;
+    napi_value arraybuffer;
+    status = napi_get_typedarray_info(env, arg[index], &type, &length, &data, &arraybuffer, NULL);
+    if (status != napi_ok) {
+        return false;
+    }
+
+    // Verify that it is a Uint32Array
+    if (type != napi_uint32_array) {
+        THROW_TYPE_ERRORF(false, "Argument %lu has wrong TypedArray type. Should be a Uint32Array", index);
+    }
+
+    // Populate the vector with the data
+    uint32_t* uint32_data = static_cast<uint32_t*>(data);
+    values.assign(uint32_data, uint32_data + length);
+
+    return true;
+}
+
+/**
+ * @brief A macro to retrieve an array of unsigned long integers from the argument list at a specified index.
+ *
+ * @param index The index of the argument to retrieve.
+ * @param values The std::vector<CK_ULONG> to store the retrieved values.
+ */
+#define GET_ARGS_ULONG_VECTOR(index, values)                         \
+  std::vector<CK_ULONG> values;                                      \
+  if (!get_args_ulong_vector(env, &arg[0], argc, index, values))     \
+  {                                                                  \
+    return nullptr;                                                  \
+  }
+
+/**
  * @brief A macro that checks if the CK_RV is CKR_OK and throws an error if not.
  *
  * @param rv The CK_RV to check.
@@ -2822,5 +2878,96 @@ public:
     UNWRAP_PKCS11();
 
     return dualOperationCallback(env, info, pkcs11->functionList->C_DecryptVerifyUpdate);
+  }
+
+  static napi_value C_DeriveBIP32Master(napi_env env, napi_callback_info info)
+  {
+    UNWRAP_PKCS11();
+    GET_ARGS(4, arg)
+
+    // Read arguments
+    GET_ARGS_SESSION_HANDLE(0, sessionHandle)
+    GET_ARGS_HANDLE(1, baseKeyHandle)
+    GET_ARGS_ATTRIBUTES(2, publicKeyTemplate)
+    GET_ARGS_ATTRIBUTES(3, privateKeyTemplate)
+
+    // Create parameters
+    CK_BIP32_MASTER_DERIVE_PARAMS params;
+    params.pPublicKeyTemplate = publicKeyTemplate.attributes;
+    params.ulPublicKeyAttributeCount = publicKeyTemplateLength;
+    params.pPrivateKeyTemplate = privateKeyTemplate.attributes;
+    params.ulPrivateKeyAttributeCount = privateKeyTemplateLength;
+    params.hPublicKey = 0;
+    params.hPrivateKey = 0;
+
+    CK_MECHANISM mechanism;
+    mechanism.mechanism = CKM_BIP32_MASTER_DERIVE;
+    mechanism.pParameter = &params;
+    mechanism.ulParameterLen = sizeof(params);
+
+    // Call PKCS11 function
+    CK_RV rv = pkcs11->functionList->C_DeriveKey(sessionHandle, &mechanism, baseKeyHandle, NULL, 0, NULL);
+    ASSERT_RV(rv);
+
+    // Create result
+    napi_value result;
+    napi_create_object(env, &result);
+
+    napi_value publicKey;
+    napi_create_buffer_copy(env, sizeof(params.hPublicKey), &params.hPublicKey, nullptr, &publicKey);
+    napi_set_named_property(env, result, "publicKey", publicKey);
+
+    napi_value privateKey;
+    napi_create_buffer_copy(env, sizeof(params.hPrivateKey), &params.hPrivateKey, nullptr, &privateKey);
+    napi_set_named_property(env, result, "privateKey", privateKey);
+
+    return result;
+  }
+
+  static napi_value C_DeriveBIP32Child(napi_env env, napi_callback_info info)
+  {
+    UNWRAP_PKCS11();
+    GET_ARGS(5, arg)
+
+    // Read arguments
+    GET_ARGS_SESSION_HANDLE(0, sessionHandle)
+    GET_ARGS_HANDLE(1, baseKeyHandle)
+    GET_ARGS_ATTRIBUTES(2, publicKeyTemplate)
+    GET_ARGS_ATTRIBUTES(3, privateKeyTemplate)
+    GET_ARGS_ULONG_VECTOR(4, path)
+
+    // Create parameters
+    CK_BIP32_CHILD_DERIVE_PARAMS params;
+    params.pPublicKeyTemplate = publicKeyTemplate.attributes;
+    params.ulPublicKeyAttributeCount = publicKeyTemplateLength;
+    params.pPrivateKeyTemplate = privateKeyTemplate.attributes;
+    params.ulPrivateKeyAttributeCount = privateKeyTemplateLength;
+    params.pulPath = path.data();
+    params.ulPathLen = path.size();
+    params.hPublicKey = 0;
+    params.hPrivateKey = 0;
+
+    CK_MECHANISM mechanism;
+    mechanism.mechanism = CKM_BIP32_CHILD_DERIVE;
+    mechanism.pParameter = &params;
+    mechanism.ulParameterLen = sizeof(params);
+
+    // Call PKCS11 function
+    CK_RV rv = pkcs11->functionList->C_DeriveKey(sessionHandle, &mechanism, baseKeyHandle, NULL, 0, NULL);
+    ASSERT_RV(rv);
+
+    // Create result
+    napi_value result;
+    napi_create_object(env, &result);
+
+    napi_value publicKey;
+    napi_create_buffer_copy(env, sizeof(params.hPublicKey), &params.hPublicKey, nullptr, &publicKey);
+    napi_set_named_property(env, result, "publicKey", publicKey);
+
+    napi_value privateKey;
+    napi_create_buffer_copy(env, sizeof(params.hPrivateKey), &params.hPrivateKey, nullptr, &privateKey);
+    napi_set_named_property(env, result, "privateKey", privateKey);
+
+    return result;
   }
 };

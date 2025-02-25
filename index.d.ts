@@ -1765,6 +1765,36 @@ declare module "pkcs11js" {
       inData: Buffer,
       outData: Buffer
     ): Promise<Buffer>;
+    /**
+     * Derives a BIP32 master key pair from a given seed.
+     * @param session The session's handle
+     * @param seed Handle to the seed data
+     * @param pubTemplate Template for the public key
+     * @param privTemplate Template for the private key
+     * @returns The derived key pair (public and private keys)
+     */
+    public C_DeriveBIP32Master(
+      session: Handle,
+      seed: Handle,
+      pubTemplate: Template,
+      privTemplate: Template
+    ): KeyPair;
+    /**
+     * Derives a BIP32 child key pair from a given private key and path.
+     * @param session The session's handle
+     * @param privKey Handle to the private key
+     * @param pubTemplate Template for the public key
+     * @param privTemplate Template for the private key
+     * @param path Uint32Array representing the derivation path
+     * @returns The derived key pair (public and private keys)
+     */
+    public C_DeriveBIP32Child(
+      session: Handle,
+      privKey: Handle,
+      pubTemplate: Template,
+      privTemplate: Template,
+      path: Uint32Array,
+    ): KeyPair;
     //#endregion
   }
 
@@ -2237,6 +2267,8 @@ declare module "pkcs11js" {
   const CKM_RSA_PKCS_TPM_1_1: number;
   const CKM_RSA_PKCS_OAEP_TPM_1_1: number;
   const CKM_VENDOR_DEFINED: number;
+  const CKM_BIP32_MASTER_DERIVE: number;
+  const CKM_BIP32_CHILD_DERIVE: number;
   //#endregion
 
   //#region Session flags
@@ -2341,6 +2373,8 @@ declare module "pkcs11js" {
   const CK_PARAMS_CCM: number;
   const CK_PARAM_GOSTR3410_DERIVE: number;
   const CK_PARAM_GOSTR3410_KEY_WRAP: number;
+  const CK_BIP32_MASTER_DERIVE_PARAMS: number;
+  const CK_BIP32_CHILD_DERIVE_PARAMS: number;
   //#endregion
 
   //#region User types
